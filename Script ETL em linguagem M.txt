@@ -1,0 +1,39 @@
+t.Contains([Usuário], "Alexandre Mira") then "Brasil" else if Text.Contains([Usuário], "Aretha Stecconi Carvalho") then "Brasil" else if Text.Contains([Usuário], "Maj Elitusalem Freitas") then "Brasil" else if Text.Contains([Usuário], "Marcos Wellington") then "Brasil" else if Text.Contains([Usuário], "Paulo Medeiros RN Organizador") then "Brasil" else if Text.Contains([Usuário], "Vicente Oliveira Terça Livre Tv") then "Brasil" else if Text.Contains([Usuário], "Felipe Dias") then "Brasil" else if Text.Contains([Usuário], "Pc Santos") then "Brasil" else if Text.Contains([Usuário], "Pedro SP Amigo Gabriela Pina") then "Brasil" else if Text.Contains([Usuário], "Emerson Medeiros") then "Brasil" else if Text.Contains([Usuário], "Marcos do Val") then "Brasil" else if Text.Contains([Usuário], "Edvaldo Rangel") then "Brasil" else if Text.Contains([Usuário], "Gilliard Agressor Digital") then "Brasil" else if Text.Contains([Usuário], "Luciano Rocha RJ") then "Brasil" else if Text.Contains([Usuário], "Gilmar Lozano Segóvia") then "Brasil" else if Text.Contains([Usuário], "Hugo Leonardo SP") then "Brasil" else if Text.Contains([Usuário], "Josenildo P/Doação") then "Brasil"else if Text.Contains([Usuário], "Leandro RJ") then "Brasil" else if Text.Contains([Usuário], "Alex Lira Coord Nac CDB") then "Brasil" else if Text.Contains([Usuário], "Daniel AMAZONAS") then "Brasil" else 0),
+    // Alterar tipo País em texto
+    #"Alter Type País" = Table.TransformColumnTypes(#"J) Criando País",{{"País", type text}}),
+    // coluna Msg de Usuário operador contém valor <Arquivo de mídia oculto> sainda Sim.e Senão coluna Usuário contém WhatsAp saida ""
+    // Senão Não.
+    #"K) Criando Midia" = Table.AddColumn(#"Alter Type País", "Midia", each if Text.Contains([Msg de Usuário], "<Arquivo de mídia oculto>") then "Sim" else if Text.Contains([Usuário], "WhatsApp") then "" else "Não", type text),
+    // P/FRENTE Coluna Midia
+    #"P/FRENTE Midia" = Table.ReorderColumns(#"K) Criando Midia",{"Data/hora", "Data", "Hora", "Msgs Brutas", "Msg do WhatsApp", "Usuário", "Msg de Usuário", "Midia", "Estado", "Cidade/Região", "País"}),
+    // Coluna Condicional Adicionada URL
+    // coluna Msg de Usuário operador contém valor "www. " "http" "https" ".com" "://" sainda Sim e Senão coluna Usuário contém WhatsAp saida "" Senão Não
+    #"L) Criação URL" = Table.AddColumn(#"P/FRENTE Midia", "URL", each if Text.Contains([Msg de Usuário], "www. ") then "Sim" else if Text.Contains([Msg de Usuário], "http") then "Sim" else if Text.Contains([Msg de Usuário], "https") then "Sim" else if Text.Contains([Msg de Usuário], ".com") then "Sim" else if Text.Contains([Msg de Usuário], "://") then "Sim" else if Text.Contains([Usuário], "WhatsApp") then "" else "Não"),
+    // P/FRENTE URL Colunas Reordenadas
+    #"P/FRENTE URL" = Table.ReorderColumns(#"L) Criação URL",{"Data/hora", "Data", "Hora", "Msgs Brutas", "Msg do WhatsApp", "Usuário", "Msg de Usuário", "Midia", "URL", "Estado", "Cidade/Região", "País"}),
+    // Criando coluna MidiaOrURL 
+    #"M) Criando MidiaOrURL " = Table.AddColumn(#"P/FRENTE URL", "MidiaOrURL", each if Text.Contains([Msg de Usuário], "www.") then "Sim" else if Text.Contains([Msg de Usuário], "http") then "Sim" else if Text.Contains([Msg de Usuário], "https") then "Sim" else if Text.Contains([Msg de Usuário], ".com ") then "Sim" else if Text.Contains([Msg de Usuário], "://") then "Sim" else if Text.Contains([Msg de Usuário], "<Arquivo de mídia oculto>") then "Sim" else if Text.Contains([Usuário], "WhatsApp") then "" else "Não", type text),
+    // P/FRENTE coluna MidiaOrURL
+    #"P/FRENTE MidiaOrURL" = Table.ReorderColumns(#"M) Criando MidiaOrURL ",{"Data/hora", "Data", "Hora", "Msgs Brutas", "Msg do WhatsApp", "Usuário", "Msg de Usuário", "Midia", "URL", "MidiaOrURL", "Estado", "Cidade/Região", "País"}),
+    // Pré-Caracteres do Texto Inserido
+    #"Criando Pré-Caracteres" = Table.AddColumn(#"P/FRENTE MidiaOrURL", "Pré-Caracteres", each Text.Length([Msg de Usuário]), Int64.Type),
+    // coluna Msg de Usuário operador contém valor "<Arquivo de mídia oculto> saida 0, a coluna Usuário operador Contém v WhatsApp saida null, Pré-Caracteres É maior que ou igual a 1 Saida Pré-carctares, se não Não
+    #"N) Criando Caracteres" = Table.AddColumn(#"Criando Pré-Caracteres", "Caracteres", each if Text.Contains([Usuário], "WhatsApp") then 0 else if [#"Pré-Caracteres"] >= 1 then [#"Pré-Caracteres"] else "Não", Int64.Type),
+    // Colunas Reordenadas
+    #"P/FRENTE Caracteres" = Table.ReorderColumns(#"N) Criando Caracteres",{"Data/hora", "Data", "Hora", "Msgs Brutas", "Msg do WhatsApp", "Usuário", "Msg de Usuário", "Caracteres", "Midia", "URL", "MidiaOrURL", "Estado", "Cidade/Região", "País", "Pré-Caracteres"}),
+    // Coluna Pré-Caracteres Removida
+    #"Deletar Pré-Caracteres" = Table.RemoveColumns(#"P/FRENTE Caracteres",{"Pré-Caracteres"}),
+    // Criando coluna Pré-Palavras usando coluna personalizada com a formula: List.Count(Text.SplitAny([Msg de Usuário],""))
+    // 
+    #"Criando Pré-Palavras" = Table.AddColumn(#"Deletar Pré-Caracteres", "Pré-Palavras", each List.Count(Text.SplitAny([Msg de Usuário],""))),
+    // Criando coluna contando as palavras usando a formula: List.Count(List.RemoveItems(Text.SplitAny([Msg de Usuário]," #(tab)#(lf)"),{""}))
+    #"O) Criando Palavras" = Table.AddColumn(#"Criando Pré-Palavras", "Palavras", each List.Count(List.RemoveItems(Text.SplitAny([Msg de Usuário]," #(tab)#(lf)"),{""})), Int64.Type),
+    // P/FRENTE Coluna Palavras
+    #"P/FRENTE Palavras" = Table.ReorderColumns(#"O) Criando Palavras",{"Data/hora", "Data", "Hora", "Msgs Brutas", "Msg do WhatsApp", "Usuário", "Msg de Usuário", "Palavras", "Caracteres", "Midia", "URL", "MidiaOrURL", "Estado", "Cidade/Região", "País", "Pré-Palavras"}),
+    // Deletar Colunas Pré-Palavras
+    #"Deletar Pré-Palavras" = Table.RemoveColumns(#"P/FRENTE Palavras",{"Pré-Palavras"}),
+    // Criando coluna Grupo usando 
+    // Coluna personalizada e a formula = Nome do grupo
+    #"Criando Grupo" = Table.AddColumn(#"Deletar Pré-Palavras", "Grupo", each "🔰Ƒamília Bolsonaro🔰1", type text)
+in
+    #"Criando Grupo"
